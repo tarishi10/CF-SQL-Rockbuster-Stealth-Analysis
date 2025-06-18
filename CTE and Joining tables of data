@@ -1,0 +1,83 @@
+# This file contains queries depicting the use of basic joins and CTEs in the Rockbuster dataset.
+
+##Top 10 countries with the highest customers using an inner join. 
+SELECT COUNT (A.customer_id) AS customer_count,
+      D.country
+FROM customer A
+INNER JOIN address B ON A.address_id=B.address_id
+INNER JOIN city C ON B.city_id=C.city_id
+INNER JOIN country D ON C.country_id=D.country_id
+GROUP BY country
+ORDER BY customer_count DESC
+LIMIT 10;
+
+## Top 5 customers in the top 10 cities 
+SELECT SUM(A.amount) AS total_amount_paid,
+COUNT (B.customer_id) AS customer_count,
+      B.first_name,
+      B.last_name,
+      D.city, E.country
+FROM payment A
+INNER JOIN customer B ON A.customer_id=B.customer_id
+INNER JOIN address C ON B.address_id=C.address_id
+INNER JOIN city D ON C.city_id=D.city_id
+INNER JOIN country E ON D.country_id=E.country_id
+WHERE city IN ('Aurora','Atlixco','Xintai','Adoni','Dhule(Dhulia)','Kurashiki','Pingxiang','Sivas','Celaya','So Leopoldo') AND country IN ('India','China','United States','Japan','Mexico','Brazil','Russian Federation','Philippines','Turkey','Indonesia')
+GROUP BY city, country,first_name,last_name
+ORDER BY customer_count DESC 
+LIMIT 10;
+
+
+##Identifying how many of the top 5 customers are based within each country.
+## Using a subquery to get the output
+SELECT COUNT (DISTINCT A.customer_id) AS customeer_count,
+       COUNT (DISTINCT top_five_customers.customer_count) AS top_customer_count,
+       D.country
+FROM customer A
+     INNER JOIN  address B ON A.address_id=B.address_id
+     INNER JOIN city C ON B.city_id=C.city_id
+     INNER JOIN country D ON C.country_id=D.country_id
+LEFT JOIN 
+    (SELECT SUM(p.amount) AS total_amount_paid,
+     COUNT(A.customer_id) AS customer_count,
+     C.city, D.country
+FROM payment P
+INNER JOIN customer A ON P.customer_id=A.customer_id
+INNER JOIN  address B ON A.address_id=B.address_id
+INNER JOIN city C ON B.city_id=C.city_id
+INNER JOIN country D ON C.country_id=D.country_id
+WHERE city IN ('Aurora','Atlixco','Xintai','Adoni','Dhule(Dhulia)','Kurashiki','Pingxiang','Sivas','Celaya','So Leopoldo') AND country IN ('India','China','United States','Japan','Mexico','Brazil','Russian Federation','Philippines','Turkey','Indonesia')
+GROUP BY C.city, D.country
+ORDER BY total_amount_paid DESC
+LIMIT 10) AS top_five_customers ON top_five_customers.country=D.country
+GROUP BY D.country
+ORDER BY top_customer_count DESC
+LIMIT 5;
+
+
+##Identifying how many of the top 5 customers are based within each country.
+## Using CTE to get the output
+WITH top_five_customers AS
+     (SELECT SUM(P.amount) AS total_amount_paid,
+      COUNT (A.customer_id) AS customer_count,
+      C.city, D.country
+FROM payment P
+INNER JOIN customer A ON P.customer_id=A.customer_id
+INNER JOIN  address B ON A.address_id=B.address_id
+INNER JOIN city C ON B.city_id=C.city_id
+INNER JOIN country D ON C.country_id=D.country_id
+WHERE city IN ('Aurora','Atlixco','Xintai','Adoni','Dhule(Dhulia)','Kurashiki','Pingxiang','Sivas','Celaya','So Leopoldo') AND country IN ('India','China','United States','Japan','Mexico','Brazil','Russian Federation','Philippines','Turkey','Indonesia')
+GROUP BY C.city, D.country
+ORDER BY total_amount_paid DESC
+LIMIT 10)
+SELECT COUNT(DISTINCT A.customer_id) AS customer_count
+       COUNT(DISTINCT top_five_customers.customer_count) AS top_customer_count,
+       D.country
+FROM customer A
+      INNER JOIN  address B ON A.address_id=B.address_id
+      INNER JOIN city C ON B.city_id=C.city_id
+      INNER JOIN country D ON C.country_id=D.country_id
+LEFT JOIN top_five_customers ON top_five_customers.country=D.country
+GROUP BY D.country
+ORDER BY top_customer_count DESC
+LIMIT 5;
